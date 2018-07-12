@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exercise;
+use App\Category;
 use Illuminate\Http\Request;
 
 use App\Http\Resources\ExerciseResource;
@@ -28,7 +29,21 @@ class ExerciseController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->validate(request(), [
+            'name' => 'required',
+            'type' => 'required',
+            'category' => 'required'
+        ]);
+
+        $category = Category::where('name', $request->category)->first();
+
+        $exercise = Exercise::create([
+            'name' => $request->name,
+            'type' => $request->type,
+            'category_id' => $category->id
+        ]);
+
+        return new ExerciseResource($exercise);
     }
 
     /**
@@ -53,7 +68,15 @@ class ExerciseController extends Controller
      */
     public function update(Request $request, Exercise $exercise)
     {
-        //
+        $category = Category::where('name', $request->category)->first();
+
+        $exercise->name = $request->name;
+        $exercise->type = $request->type;
+        $exercise->category_id = $category->id;
+
+        if($exercise->save()){
+            return new ExerciseResource($exercise);
+        }
     }
 
     /**
@@ -64,6 +87,11 @@ class ExerciseController extends Controller
      */
     public function destroy(Exercise $exercise)
     {
-        //
+        if($exercise->delete()){
+
+            return response()->json([
+                'message' => 'Exercise deleted successfully'
+            ], 200);
+        } 
     }
 }

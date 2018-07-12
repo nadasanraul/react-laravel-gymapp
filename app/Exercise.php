@@ -7,6 +7,7 @@ use App\Category;
 
 class Exercise extends Model
 {
+    public $timestamps = false;
     protected $fillable = ['name', 'type', 'category_id'];
 
     public function category() {

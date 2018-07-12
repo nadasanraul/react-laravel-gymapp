@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Resources\SetResource;
 use JWTAuth;
+
+use App\Exercise;
 use App\Set;
 
 class SetController extends Controller
@@ -40,9 +42,23 @@ class SetController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Exercise $exercise, $day, Request $request)
     {
-        //
+        $this->validate(request(), [
+            'weight' => 'required',
+            'reps' => 'required',
+        ]);
+
+        $set = Set::create([
+            'exercise_id' => $exercise->id,
+            'weight' => $request->weight,
+            'reps' => $request->reps,
+            'user_id' => $this->user->id,
+            'total_weight' => $request->weight * $request->reps,
+            'for_day' => $day
+        ]);
+
+        return new SetResource($set);
     }
 
     /**
@@ -51,9 +67,22 @@ class SetController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Exercise $exercise, $day)
     {
-        //
+        $sets = Set::with(['exercise', 'user'])
+            ->where('exercise_id', $exercise->id)
+            ->where('user_id', $this->user->id)
+            ->whereDate('created_at', $day)
+            ->get();
+
+        if(!empty($sets)) {
+            return SetResource::collection($sets);
+        } else {
+            return response()->json([
+                'message' => 'No sets for this date'
+            ], 200);
+        }
+
     }
 
     /**
@@ -63,9 +92,14 @@ class SetController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Set $set)
     {
-        //
+        $set->weight = $request->weight;
+        $set->reps = $request->reps;
+
+        if($set->save()){
+            return new SetResource($set);
+        }
     }
 
     /**
@@ -74,8 +108,12 @@ class SetController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Set $set)
     {
-        //
+        if($set->delete()) {
+            return response()->json([
+                'message' => 'Set deleted successfully'
+            ], 200);
+        }
     }
 }

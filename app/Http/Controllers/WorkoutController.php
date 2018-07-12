@@ -25,7 +25,7 @@ class WorkoutController extends Controller
         $workouts = [];
 
         foreach($sets as $set) {
-            $date = date('Y-m-d', strtotime($set->created_at));
+            $date = date('Y-m-d', strtotime($set->for_day));
             if(!array_key_exists($date, $workouts)){
                 $workouts[$date] = (object)[
                     'exercises' => [
@@ -36,22 +36,26 @@ class WorkoutController extends Controller
 
         foreach($workouts as $key => $workout) {
             foreach($sets as $set) {
-                $date = date('Y-m-d', strtotime($set->created_at));
+                $date = date('Y-m-d', strtotime($set->for_day));
                 if(!array_key_exists($set->exercise->name, $workout->exercises) && $date === $key){
                     $workout->exercises[$set->exercise->name] = (object)[
                         'category' => $set->exercise->category->name,
                         'sets' => [
                             [
+                                'id' => $set->id,
                                 'weight' => $set->weight,
                                 'reps' => $set->reps
                             ]
-                        ]
+                        ],
+                        'total_weight' => $set->total_weight
                     ];
                 } else if($date === $key) {
                     $arr = [
+                        'id' => $set->id,
                         'weight' => $set->weight,
                         'reps' => $set->reps
                     ];
+                    $workout->exercises[$set->exercise->name]->total_weight += $set->total_weight;
                     array_push($workout->exercises[$set->exercise->name]->sets, $arr);
                 }
             }
@@ -92,7 +96,7 @@ class WorkoutController extends Controller
         $user = User::find(3);
         $sets = Set::with(['exercise', 'user'])
             ->where('user_id', $user->id)
-            ->whereDate('created_at', $day)
+            ->where('for_day', $day)
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -104,17 +108,21 @@ class WorkoutController extends Controller
                     'category' => $set->exercise->category->name,
                     'sets' => [
                         [
+                            'id' => $set->id,
                             'weight' => $set->weight,
                             'reps' => $set->reps
                         ]
-                    ]
+                    ],
+                    'total_weight' => $set->total_weight
                 ];
                 
             } else {
                 $arr = [
+                    'id' => $set->id,
                     'weight' => $set->weight,
                     'reps' => $set->reps
                 ];
+                $exercises[$set->exercise->name]->total_weight += $set->total_weight;
                 array_push($exercises[$set->exercise->name]->sets, $arr);
             }
         }

@@ -28,7 +28,15 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->validate(request(), [
+            'name' => 'required',
+        ]);
+
+        $category = Category::create([
+            'name' => $request->name,
+        ]);
+
+        return new CategoryResource($category);
     }
 
     /**
@@ -50,9 +58,13 @@ class CategoryController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Category $category)
     {
-        //
+        $category->name = $request->name;
+
+        if($category->save()){
+            return new CategoryResource($category);
+        }
     }
 
     /**
@@ -61,8 +73,12 @@ class CategoryController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Category $category)
     {
-        //
+        if($category->delete()){
+            return response()->json([
+                'message' => 'Category deleted successfully'
+            ], 200);
+        }
     }
 }

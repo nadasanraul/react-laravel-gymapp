@@ -8,6 +8,8 @@ use App\User;
 
 class Set extends Model
 {
+    protected $guarded = [];
+
     public function exercise() {
         return $this->belongsTo(Exercise::class);
     }

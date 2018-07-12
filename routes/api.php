@@ -26,6 +26,8 @@ Route::group(['middleware' => 'auth.jwt'], function() {
 
     //Sets routes
     Route::apiResource('sets', 'SetController');
+    Route::get('/sets/{exercise}/{day}', 'SetController@show');
+    Route::post('/sets/{exercise}/{day}', 'SetController@store');
 });
 
 //Workout routes
