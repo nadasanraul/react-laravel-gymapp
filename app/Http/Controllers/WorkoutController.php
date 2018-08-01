@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\User;
 use App\Set;
+use JWTAuth;
 
 class WorkoutController extends Controller
 {
@@ -16,154 +17,135 @@ class WorkoutController extends Controller
      */
     public function index()
     {
-        $user = User::find(3);
-        $sets = Set::with(['exercise', 'user'])
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'asc')
-            ->get();
 
+        $uniqueDays = [];
         $workouts = [];
 
-        foreach($sets as $set) {
-            $date = date('Y-m-d', strtotime($set->for_day));
-            if(!array_key_exists($date, $workouts)){
-                $workouts[$date] = (object)[
-                    'exercises' => [
-                    ]
-                ];
+        $sets = Set::with(['exercise'])
+            ->where('user_id', auth()->user()->id)
+            ->orderBy('created_at', 'asc')
+            ->get();
+        
+        $days = Set::select('for_day')
+            ->where('user_id', auth()->user()->id)
+            ->get();
+
+
+        foreach($days as $day) {
+            if(!in_array($day->for_day, $uniqueDays)) {
+                array_push($uniqueDays, $day->for_day);
             }
         }
 
-        foreach($workouts as $key => $workout) {
+
+        foreach($uniqueDays as $day) {
+            $workout = (object)[
+                'day' => $day,
+                'exercises' => []
+            ];
+            array_push($workouts, $workout);
+        }
+
+        foreach($workouts as $workout) {
+            $workout_exercises = [];
             foreach($sets as $set) {
-                $date = date('Y-m-d', strtotime($set->for_day));
-                if(!array_key_exists($set->exercise->name, $workout->exercises) && $date === $key){
-                    $workout->exercises[$set->exercise->name] = (object)[
-                        'category' => $set->exercise->category->name,
-                        'sets' => [
-                            [
+                if($set->for_day === $workout->day && !in_array($set->exercise->name, $workout_exercises)) {
+                    array_push($workout_exercises, $set->exercise->name);
+                } 
+            }
+            foreach($workout_exercises as $item) {
+                $exercise = (object)[
+                    'name' => $item,
+                    'sets' => [],
+                    'total_weight' => 0,
+                    'total_reps' => 0
+                ];
+                array_push($workout->exercises, $exercise);
+            }
+        }
+
+        foreach($sets as $set) {
+            foreach($workouts as $workout) {
+                if($set->for_day === $workout->day) {
+                    foreach($workout->exercises as $exercise) {
+                        if($set->exercise->name === $exercise->name) {
+                            array_push($exercise->sets, (object)[
                                 'id' => $set->id,
                                 'weight' => $set->weight,
                                 'reps' => $set->reps
-                            ]
-                        ],
-                        'total_weight' => $set->total_weight
-                    ];
-                } else if($date === $key) {
-                    $arr = [
-                        'id' => $set->id,
-                        'weight' => $set->weight,
-                        'reps' => $set->reps
-                    ];
-                    $workout->exercises[$set->exercise->name]->total_weight += $set->total_weight;
-                    array_push($workout->exercises[$set->exercise->name]->sets, $arr);
+                            ]);
+                            $exercise->total_weight += $set->total_weight;
+                            $exercise->total_reps += $set->reps;
+                        }
+                    }
                 }
             }
         }
 
-        return $workouts;
+
+        return [
+            'status' => 'success',
+            'data' => $workouts,
+        ];
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
 
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  string  $day
      * @return \Illuminate\Http\Response
      */
     public function show($day)
     {
-        $user = User::find(3);
-        $sets = Set::with(['exercise', 'user'])
-            ->where('user_id', $user->id)
+        // $user = User::find(3);
+        $sets = Set::with(['exercise'])
+            ->where('user_id', auth()->user()->id)
             ->where('for_day', $day)
             ->orderBy('created_at', 'asc')
             ->get();
 
         $exercises  = [];
+        $workout_exercises = [];
+
+        foreach($sets as $set) {
+            if(!in_array($set->exercise->name, $workout_exercises)) {
+                array_push($workout_exercises, $set->exercise->name);
+            }
+        }
+
+        foreach($workout_exercises as $item) {
+            $exercise = (object)[
+                'name' => $item,
+                'sets' => [],
+                'total_weight' => 0,
+                'total_reps' => 0
+            ];
+            array_push($exercises, $exercise);
+        }
+
         
         foreach($sets as $set) {
-            if(!array_key_exists($set->exercise->name, $exercises)){
-                $exercises[$set->exercise->name] = (object)[
-                    'category' => $set->exercise->category->name,
-                    'sets' => [
-                        [
-                            'id' => $set->id,
-                            'weight' => $set->weight,
-                            'reps' => $set->reps
-                        ]
-                    ],
-                    'total_weight' => $set->total_weight
-                ];
-                
-            } else {
-                $arr = [
-                    'id' => $set->id,
-                    'weight' => $set->weight,
-                    'reps' => $set->reps
-                ];
-                $exercises[$set->exercise->name]->total_weight += $set->total_weight;
-                array_push($exercises[$set->exercise->name]->sets, $arr);
+            foreach($exercises as $exercise) {
+                if($set->exercise->name === $exercise->name) {
+                    array_push($exercise->sets, (object)[
+                        'id' => $set->id,
+                        'weight' => $set->weight,
+                        'reps' => $set->reps
+                    ]);
+                    $exercise->total_weight += $set->total_weight;
+                    $exercise->total_reps += $set->reps;
+                }
             }
         }
 
         return [
-            'day' => $day,
-            'exercises' => $exercises
+            'status' => 'success',
+            'data' => [
+                'day' => $day,
+                'exercises' => $exercises
+            ]
         ];
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
 }

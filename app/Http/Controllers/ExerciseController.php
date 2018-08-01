@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exercise;
 use App\Category;
+use JWTAuth;
 use Illuminate\Http\Request;
 
 use App\Http\Resources\ExerciseResource;
@@ -17,7 +18,10 @@ class ExerciseController extends Controller
      */
     public function index()
     {
-        return ExerciseResource::collection(Exercise::with('category')->get());
+        return [
+            'status' => 'success',
+            'data' => ExerciseResource::collection(Exercise::with('category')->get())
+        ];
     }
 
 
@@ -43,7 +47,10 @@ class ExerciseController extends Controller
             'category_id' => $category->id
         ]);
 
-        return new ExerciseResource($exercise);
+        return [
+            'status' => 'success',
+            'data' => new ExerciseResource($exercise)
+        ];
     }
 
     /**
@@ -55,7 +62,10 @@ class ExerciseController extends Controller
     public function show(Exercise $exercise)
     {
 
-        return new ExerciseResource($exercise);
+        return [
+            'status' => 'success',
+            'data' => new ExerciseResource($exercise)
+        ];
     }
 
 
@@ -75,7 +85,10 @@ class ExerciseController extends Controller
         $exercise->category_id = $category->id;
 
         if($exercise->save()){
-            return new ExerciseResource($exercise);
+            return [
+                'status' => 'success',
+                'data' => new ExerciseResource($exercise)
+            ];
         }
     }
 
@@ -89,9 +102,10 @@ class ExerciseController extends Controller
     {
         if($exercise->delete()){
 
-            return response()->json([
+            return [
+                'status' => 'success',
                 'message' => 'Exercise deleted successfully'
-            ], 200);
+            ];
         } 
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use JWTAuth;
 
 class CategoryResource extends JsonResource
 {
@@ -25,7 +26,7 @@ class CategoryResource extends JsonResource
             ],
             'links' => [
                 'self' => route('categories.show', ['id' => $this->id])
-            ]
+            ],
         ];
     }
 }

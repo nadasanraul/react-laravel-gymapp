@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Category;
+use JWTAuth;
 
 use App\Http\Resources\CategoryResource;
 
@@ -16,7 +17,10 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        return CategoryResource::collection(Category::with('exercises:name,type,category_id')->get());
+        return [
+            'status' => 'success',
+            'data' => CategoryResource::collection(Category::with('exercises:name,type,category_id')->get())
+        ];
     }
 
 
@@ -36,7 +40,10 @@ class CategoryController extends Controller
             'name' => $request->name,
         ]);
 
-        return new CategoryResource($category);
+        return [
+            'status' => 'success',
+            'data' => new CategoryResource($category)
+        ];
     }
 
     /**
@@ -47,7 +54,10 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
-        return new CategoryResource($category);
+        return [
+            'status' => 'success',
+            'data' => new CategoryResource($category)
+        ];
     }
 
 
@@ -63,7 +73,10 @@ class CategoryController extends Controller
         $category->name = $request->name;
 
         if($category->save()){
-            return new CategoryResource($category);
+            return [
+                'status' => 'success',
+                'data' => new CategoryResource($category)
+            ];
         }
     }
 
@@ -76,9 +89,10 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         if($category->delete()){
-            return response()->json([
+            return [
+                'status' => 'success',
                 'message' => 'Category deleted successfully'
-            ], 200);
+            ];
         }
     }
 }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Resources\SetResource;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use JWTAuth;
 
 use App\Exercise;
@@ -12,12 +14,6 @@ use App\Set;
 
 class SetController extends Controller
 {
-    protected $user;
-
-    //Constructor
-    public function __construct() {
-        $this->user = JWTAuth::parseToken()->authenticate();
-    }
 
     /**
      * Display a listing of the resource.
@@ -26,14 +22,12 @@ class SetController extends Controller
      */
     public function index()
     {
-        return SetResource::collection(
-            Set::with(
-                [
-                    'exercise', 
-                    'user'
-                ]
-            )->where('user_id', '=', $this->user->id)->get()
-        );
+        $sets = Set::with(['exercise', 'user'])->where('user_id', '=', auth()->user()->id)->get();
+
+        return [
+            'status' => 'success',
+            'data' => SetResource::collection($sets)
+        ];
     }
 
     /**
@@ -53,12 +47,15 @@ class SetController extends Controller
             'exercise_id' => $exercise->id,
             'weight' => $request->weight,
             'reps' => $request->reps,
-            'user_id' => $this->user->id,
+            'user_id' => auth()->user()->id,
             'total_weight' => $request->weight * $request->reps,
             'for_day' => $day
         ]);
 
-        return new SetResource($set);
+        return [
+            'status' => 'success',
+            'data' => new SetResource($set)
+        ];
     }
 
     /**
@@ -71,16 +68,20 @@ class SetController extends Controller
     {
         $sets = Set::with(['exercise', 'user'])
             ->where('exercise_id', $exercise->id)
-            ->where('user_id', $this->user->id)
+            ->where('user_id', auth()->user()->id)
             ->whereDate('created_at', $day)
             ->get();
 
-        if(!empty($sets)) {
-            return SetResource::collection($sets);
+        if(count($sets) > 0) {
+            return [
+                'status' => 'success',
+                'data' => SetResource::collection($sets)
+            ];
         } else {
-            return response()->json([
+            return [
+                'status' => 'success',
                 'message' => 'No sets for this date'
-            ], 200);
+            ];
         }
 
     }
@@ -94,11 +95,21 @@ class SetController extends Controller
      */
     public function update(Request $request, Set $set)
     {
-        $set->weight = $request->weight;
-        $set->reps = $request->reps;
-
-        if($set->save()){
-            return new SetResource($set);
+        if($set->user_id === auth()->user()->id) {
+            $set->weight = $request->weight;
+            $set->reps = $request->reps;
+    
+            if($set->save()){
+                return [
+                    'status' => 'success',
+                    'data' => new SetResource($set)
+                ];
+            }
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized request',
+            ], 401);
         }
     }
 
@@ -110,10 +121,18 @@ class SetController extends Controller
      */
     public function destroy(Set $set)
     {
-        if($set->delete()) {
-            return response()->json([
+        if($set->id === auth()->user()->id){
+            $set->delete();
+
+            return [
+                'status' => 'success',
                 'message' => 'Set deleted successfully'
-            ], 200);
+            ];
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized request',
+            ], 401);
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use JWTAuth;
 
 class SetResource extends JsonResource
 {
@@ -36,7 +37,7 @@ class SetResource extends JsonResource
             'links' => [
                 'self' => route('sets.show', ['set' => $this->id]),
                 'exercise' => route('exercises.show', ['id' => $this->exercise->id])
-            ]
+            ],
         ];
     }
 }
