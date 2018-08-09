@@ -33,11 +33,13 @@ class AuthController extends Controller
         try  {
             if(!$token = auth()->attempt($data)) {
                 return response()->json([
-                    'error' => 'Unauthorized'
+                    'status' => 'error',
+                    'message' => 'Unauthorized'
                 ], 401);
             }
         } catch(JWTException $e) {
             return response()->json([
+                'status' => 'error',
                 'message' => 'Something went wrong'
             ], 500);
         }
@@ -51,23 +53,16 @@ class AuthController extends Controller
         try {
             auth()->logout();
             return response()->json([
+                'status' => 'success',
                 'message' => 'user is logged out'
             ], 200);
         } catch(JWTException $e) {
             return  response()->json([
+                'status' => 'error',
                 'message' => 'user can not be logged out',
             ], 500);
         }
 
-    }
-
-    protected function respondWithToken($token) {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
-            'user' => auth()->user()
-        ]);
     }
 
     public function refresh() {
@@ -82,5 +77,30 @@ class AuthController extends Controller
         }
 
         return $this->respondWithToken($token);
+    }
+
+    public function getUser() {
+        try {
+            $token = JWTAuth::getToken()->get();
+        } catch (JWTException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not found'
+            ], 500);
+        }
+
+        return $this->respondWithToken($token);
+    }
+
+    protected function respondWithToken($token) {
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60,
+            'user' => [
+                'name' => auth()->user()->name,
+                'email' => auth()->user()->email
+            ]
+        ]);
     }
 }

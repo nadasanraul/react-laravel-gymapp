@@ -13,10 +13,6 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 Route::group(['middleware' => 'jwt.auth'], function() {
     //Exercises routes
     Route::apiResource('exercises', 'ExerciseController');
@@ -33,10 +29,10 @@ Route::group(['middleware' => 'jwt.auth'], function() {
     Route::get('/workouts/{day}', 'WorkoutController@show');
     Route::get('/workouts', 'WorkoutController@index');
 
-    Route::post('logout', 'AuthController@logout');
-
-    //Refresh token
+    //Auth routes
+    Route::post('/logout', 'AuthController@logout');
     Route::get('/refreshtoken', 'AuthController@refresh');
+    Route::get('/user', 'AuthController@getUser');
 });
 
 
